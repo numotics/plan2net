@@ -7,10 +7,16 @@ import { useEditorStore, serializeProject, importProject } from '@/lib/store';
 import { saveToFile } from '@/lib/utils';
 import { useState } from 'react';
 import { PortalModal } from '@/components/util/PortalModal';
+import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '../ui/label';
 
 export function Header() {
-  const { zoomLevel, setZoomLevel } = useEditorStore();
+  const { zoomLevel, setZoomLevel, setContent } = useEditorStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isContentModalOpen, setIsContentModalOpen] = useState(false);
+  const [newContentUrl, setNewContentUrl] = useState('');
+  const [contentType, setContentType] = useState<'pdf' | 'image'>('pdf');
 
   const handleSave = () => {
     let serialized = serializeProject();
@@ -29,6 +35,14 @@ export function Header() {
     }
   };
 
+  const handleContentUrlChange = () => {
+    if (newContentUrl) {
+      setContent(newContentUrl, contentType);
+      setIsContentModalOpen(false);
+      setNewContentUrl('');
+    }
+  };
+
   return (
     <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center px-4">
@@ -41,6 +55,7 @@ export function Header() {
           <DropdownMenuContent>
             <DropdownMenuItem onSelect={() => console.log('New Project')}>New</DropdownMenuItem>
             <DropdownMenuItem onSelect={handleOpen}>Open</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setIsContentModalOpen(true)}>Change Content</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => console.log('Preferences')}>Preferences</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -73,10 +88,49 @@ export function Header() {
         </div>
       </div>
 
-      {/* Modal for File Input */}
+      {/* File Open Modal */}
       <PortalModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="w-1/3">
         <h2>Select a file to open</h2>
         <input type="file" onChange={handleFileChange} />
+      </PortalModal>
+
+      {/* Content Change Modal */}
+      <PortalModal isOpen={isContentModalOpen} onClose={() => setIsContentModalOpen(false)} className="w-1/3">
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Change Content</h2>
+          
+          <div className="space-y-2">
+            <Label>Content Type</Label>
+            <Select value={contentType} onValueChange={(value: 'pdf' | 'image') => setContentType(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem value="image">Image</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>URL</Label>
+            <Input
+              type="text"
+              placeholder="Enter content URL"
+              value={newContentUrl}
+              onChange={(e) => setNewContentUrl(e.target.value)}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsContentModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleContentUrlChange}>
+              Update
+            </Button>
+          </div>
+        </div>
       </PortalModal>
     </header>
   );
