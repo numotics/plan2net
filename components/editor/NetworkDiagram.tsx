@@ -1,23 +1,30 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
 import { useEditorStore } from "@/lib/store";
 import { library } from "@/lib/itemLibrary";
 import { hashCode, intToHexColor } from "@/lib/utils";
 
-// Initialize Cytoscape extensions
 cytoscape.use(dagre);
+
+function filterRegistryForRendering(itemsRegistry) {
+  return Object.keys(itemsRegistry).reduce((acc, key) => {
+    const { pdfPosition, ...rest } = itemsRegistry[key];
+    acc[key] = rest;
+    return acc;
+  }, {});
+}
 
 export function NetworkDiagram() {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
 
-  // Extract necessary state and actions from Zustand store
   const { setSelectedNode, addItem, itemsRegistry } = useEditorStore();
 
-  // Initialize Cytoscape instance and set up event listeners
+  const nonPdfItemsRegistry = useMemo(() => filterRegistryForRendering(itemsRegistry), [itemsRegistry]);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -25,7 +32,7 @@ export function NetworkDiagram() {
 
     cyRef.current = cytoscape({
       container: containerRef.current,
-      elements: [], // Initial empty elements
+      elements: [],
       style: [
         {
           selector: "node",
@@ -61,22 +68,17 @@ export function NetworkDiagram() {
       layout: {
         name: "grid",
       },
-      // Enable user interaction
       userZoomingEnabled: true,
       userPanningEnabled: true,
       boxSelectionEnabled: true,
       maxZoom: 5,
-      minZoom: 0.5
+      minZoom: 0.5,
     });
 
-
-
-    // Event listener for node selection
     cyRef.current.on("tap", "node", (evt) => {
       setSelectedNode(evt.target.id());
     });
 
-    // Clean up Cytoscape instance on component unmount
     return () => {
       if (cyRef.current) {
         cyRef.current.destroy();
@@ -84,18 +86,14 @@ export function NetworkDiagram() {
     };
   }, [setSelectedNode]);
 
-  // Centralized rendering function
   const renderNetwork = () => {
     if (!cyRef.current) return;
     const cy = cyRef.current;
 
-    // Begin transaction for batch updates
     cy.batch(() => {
-      // Clear existing elements to avoid duplicates
       cy.elements().remove();
 
-      // Add nodes from itemsRegistry
-      Object.values(itemsRegistry).forEach((item) => {
+      Object.values(nonPdfItemsRegistry).forEach((item) => {
         cy.add({
           group: "nodes",
           data: {
@@ -108,12 +106,11 @@ export function NetworkDiagram() {
         });
       });
 
-      // Create edges based on properties
-      Object.values(itemsRegistry).forEach((sourceItem) => {
+      Object.values(nonPdfItemsRegistry).forEach((sourceItem) => {
         if (!sourceItem.properties) return;
 
         Object.entries(sourceItem.properties).forEach(([key, targetId]) => {
-          if (itemsRegistry[targetId]) {
+          if (nonPdfItemsRegistry[targetId]) {
             const edgeId = `${sourceItem.id}-${targetId}-edge`;
             const edgeColor = intToHexColor(hashCode(key));
             cy.add({
@@ -131,18 +128,13 @@ export function NetworkDiagram() {
           }
         });
       });
-
-      // Apply layout after adding all elements
-      cy.layout({ name: "dagre" }).run();
     });
   };
 
-  // Invoke renderNetwork whenever itemsRegistry changes
   useEffect(() => {
     renderNetwork();
-  }, [itemsRegistry]);
+  }, [nonPdfItemsRegistry]);
 
-  // Handle drag over event
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -150,7 +142,6 @@ export function NetworkDiagram() {
     console.log("Drag over event");
   };
 
-  // Handle drop event
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     console.log("Drop event triggered");
@@ -181,7 +172,6 @@ export function NetworkDiagram() {
       );
       const nodeId = `${itemType}-${existingNodes.length + 1}`;
 
-      // Add item to Zustand store. This will trigger useEffect to render the network.
       addItem({
         id: nodeId,
         type: itemType,
@@ -194,13 +184,14 @@ export function NetworkDiagram() {
         properties: library[itemType]?.properties,
       });
 
+      setSelectedNode(nodeId);
+
       console.log("Item added to registry:", nodeId);
     } catch (error) {
       console.error("Error adding item:", error);
     }
   };
 
-  // Handle drag enter event
   const onDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     console.log("Drag enter event");
@@ -210,7 +201,7 @@ export function NetworkDiagram() {
     <div
       ref={containerRef}
       onDragOver={onDragOver}
-      onDrop={onDrop} // Changed to onDrop from onDropCapture for clarity
+      onDrop={onDrop}
       onDragEnter={onDragEnter}
       className="h-full w-full bg-white cursor-grab"
     />

@@ -52,10 +52,6 @@ export function PDFCanvas({
       let { x, y } = item.pdfPosition;
       x = x * scale;
       y = y * scale;
-      //const icon = getIcon(item.type);
-      //if (icon) {
-      //  //context.drawImage(icon, x, y - icon.height);
-      //}
       context.fillText(item.label, x, y);
 
       context.fillStyle = "rgba(200,200,200,0.5)";
@@ -90,8 +86,7 @@ export function PDFCanvas({
     };
 
     renderPDF();
-  }, [page, scale]); // Including drawItems as a dependency breaks everything and i don't fucking know why
-
+  }, [page, scale]);
   useEffect(() => {
     const canvas = itemsCanvasRef.current;
     if (!canvas) return;
@@ -139,13 +134,9 @@ export function PDFCanvas({
     [scale, draggableItems]
   );
 
-  const handleMouseMove = useCallback(
-    (event: MouseEvent) => {
+  const handleMouseMove = useCallback((event: MouseEvent) => {
       const canvas = itemsCanvasRef.current;
       if (!canvas) return;
-
-      const draggingItem = draggableItems.find((item) => item.isDragging);
-      if (!draggingItem) return;
 
       const rect = canvas.getBoundingClientRect();
       const offsetX = (event.clientX - rect.left) / scale;
@@ -164,9 +155,31 @@ export function PDFCanvas({
             : item
         )
       );
-    },
-    [scale, draggableItems]
-  );
+  }, [scale, draggableItems]);
+  useEffect(() => {
+    const canvas = itemsCanvasRef.current;
+    if (!canvas) return;
+
+    let animationFrameId: number;
+
+    const moveListener = (event: MouseEvent) => {
+      if (!animationFrameId) {
+        animationFrameId = requestAnimationFrame(() => {
+          handleMouseMove(event);
+          animationFrameId = 0;
+        });
+      }
+    };
+
+    canvas.addEventListener("mousemove", moveListener);
+
+    return () => {
+      canvas.removeEventListener("mousemove", moveListener);
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [handleMouseMove]);
 
   const handleMouseUp = useCallback(() => {
     setDraggableItems((prevItems) =>
@@ -180,23 +193,21 @@ export function PDFCanvas({
           isDragging: false,
         };
       })
-    );
-  }, []);
+  );
+  }, [updateItem]);
 
   useEffect(() => {
     const canvas = itemsCanvasRef.current;
     if (!canvas) return;
 
     canvas.addEventListener("mousedown", handleMouseDown);
-    canvas.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
 
     return () => {
       canvas.removeEventListener("mousedown", handleMouseDown);
-      canvas.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [handleMouseDown, handleMouseMove, handleMouseUp]);
+  }, [handleMouseDown, handleMouseUp]);
 
   return (
     <div style={{ position: "relative" }} className={className}>
