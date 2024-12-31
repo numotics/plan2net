@@ -54,7 +54,7 @@
     "eslint-config-next": "13.5.1",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.446.0",
-    "next": "13.5.1",
+    "next": "^13.5.8",
     "next-themes": "^0.3.0",
     "pdfjs-dist": "^4.0.379",
     "postcss": "8.4.30",
@@ -72,5 +72,9 @@
     "vaul": "^0.9.9",
     "zod": "^3.23.8",
     "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@types/cytoscape": "^3.21.8",
+    "@types/cytoscape-dagre": "^2.3.3"
   }
 }

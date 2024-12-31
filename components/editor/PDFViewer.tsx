@@ -9,7 +9,7 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ url }: PDFViewerProps) {
-  const { zoomLevel } = useEditorStore();
+  const { zoomLevel, itemsRegistry, updateItem } = useEditorStore();
   const { page, loading, error } = usePDFPage(url);
 
   if (loading) {
@@ -34,6 +34,8 @@ export function PDFViewer({ url }: PDFViewerProps) {
         page={page}
         scale={zoomLevel}
         className="mx-auto shadow-lg"
+        items={itemsRegistry}
+        updateItem={updateItem}
       />
     </div>
   );

@@ -10,7 +10,7 @@ cytoscape.use(dagre);
 export function NetworkDiagram() {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
-  const { setSelectedNode } = useEditorStore();
+  const { setSelectedNode, addItem, itemsRegistry } = useEditorStore();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -58,6 +58,7 @@ export function NetworkDiagram() {
       userZoomingEnabled: true,
       userPanningEnabled: true,
       boxSelectionEnabled: true,
+      
     });
 
     cyRef.current.on('tap', 'node', (evt) => {
@@ -73,7 +74,8 @@ export function NetworkDiagram() {
 
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
     console.log('Drag over event');
   };
 
@@ -104,16 +106,30 @@ export function NetworkDiagram() {
 
     try {
       // Add the new node
-      const nodeId = `${itemType}-${Date.now()}`;
+      const existingNodes = cyRef.current.nodes(`[type="${itemType}"]`);
+      const nodeId = `${itemType}-${existingNodes.length + 1}`;
+
       const newNode = cyRef.current.add({
         group: 'nodes',
         data: { 
           id: nodeId,
-          label: itemType.charAt(0).toUpperCase() + itemType.slice(1)
+          label: nodeId
         },
         position
       });
       console.log('Node added successfully:', newNode.id());
+
+      addItem({
+        id: nodeId,
+        type: itemType,
+        label: nodeId,
+        position,
+        pdfPosition: {
+          x: 100,
+          y: 100
+        },
+        properties: {}
+      })
     } catch (error) {
       console.error('Error adding node:', error);
     }
@@ -124,11 +140,16 @@ export function NetworkDiagram() {
     console.log('Drag enter event');
   };
 
+  // TODO: reflect property changes here
+  // TODO: include properties as data so we can show it if we want
+
   return (
     <div 
       ref={containerRef}
       onDragOver={onDragOver}
-      onDrop={onDrop}
+      // onDragEnd={onDrop}
+      onDropCapture={onDrop}
+      // onDragEndCapture={onDrop}
       onDragEnter={onDragEnter}
       className="h-full w-full bg-white cursor-grab"
     />
