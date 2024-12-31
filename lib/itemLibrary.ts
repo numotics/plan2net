@@ -1,12 +1,32 @@
 import { Wifi, Server, Laptop, Router, LucideProps } from 'lucide-react';
 
-export const library = {
-  "router": { id: 'router', label: 'Router', icon: Router },
-  "switch": { id: 'switch', label: 'Switch', icon: Wifi },
-  "server": { id: 'server', label: 'Server', icon: Server },
-  "workstation": { id: 'workstation', label: 'Workstation', icon: Laptop },
+type Library = Record<string, { 
+  type: string; 
+  icon: React.FC<LucideProps>; // TODO: Admit any icon (base64 svg)
+  properties?: any;
+}>;
+
+export const library: Library = {
+  router: { 
+    type: 'router', 
+    icon: Router, 
+    properties: { ip: "10.0.0.1" }
+  },
+  switch: { 
+    type: 'switch', 
+    icon: Wifi, 
+    properties: { ip: "10.0.0.1" }
+  },
+  server: { 
+    type: 'server', 
+    icon: Server 
+  },
+  workstation: { 
+    type: 'workstation', 
+    icon: Laptop 
+  },
 };
 
 export const getIcon = (type: string): React.FC<LucideProps> => {
-  return Object.entries(library).find(([itemId, _]) => itemId === type)?.[1].icon || Router;
+  return library[type]?.icon || Router;
 }

@@ -20,13 +20,13 @@ export function Library() {
           const Icon = item.icon;
           return (
             <div
-              key={item.id}
+              key={item.type}
               draggable
-              onDragStart={(e) => onDragStart(e, item.id)}
+              onDragStart={(e) => onDragStart(e, item.type)}
               className="flex cursor-move items-center gap-2 rounded-lg border border-border bg-card p-2 hover:bg-accent"
             >
               <Icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              <span>{item.type}</span>
             </div>
           );
         })}

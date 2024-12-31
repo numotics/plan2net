@@ -9,7 +9,7 @@ interface PDFCanvasProps {
   page: PDFPageType | null;
   scale: number;
   className?: string;
-  items: NetworkItem[];
+  items: Record<string, NetworkItem>;
   updateItem: (updatedItem: NetworkItem) => void;
 }
 
@@ -29,7 +29,7 @@ export function PDFCanvas({
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const itemsCanvasRef = useRef<HTMLCanvasElement>(null);
   const [draggableItems, setDraggableItems] = useState<DraggableItem[]>(
-    items.map((item) => ({
+    Object.values(items).map((item) => ({
       ...item,
       isDragging: false,
     }))
@@ -37,12 +37,33 @@ export function PDFCanvas({
 
   useEffect(() => {
     setDraggableItems(
-      items.map((item) => ({
+      Object.values(items).map((item) => ({
         ...item,
         isDragging: false,
       }))
     );
   }, [items]);
+
+  const drawItems = useCallback((context: CanvasRenderingContext2D) => {
+    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    context.font = "20px Arial";
+    context.fillStyle = "black";
+
+    draggableItems.forEach((item) => {
+      let { x, y } = item.pdfPosition;
+      x = x * scale;
+      y = y * scale;
+      const icon = getIcon(item.type);
+      if (icon) {
+        //context.drawImage(icon, x, y - icon.height);
+      }
+      context.fillText(item.label, x, y);
+
+      context.fillStyle = "rgba(200,200,200,0.5)";
+      context.fillRect(x, y - HANDLE_SIZE, HANDLE_SIZE, HANDLE_SIZE);
+      context.fillStyle = "black";
+    });
+  }, [draggableItems, scale]);
 
   useEffect(() => {
     const renderPDF = async () => {
@@ -70,30 +91,7 @@ export function PDFCanvas({
     };
 
     renderPDF();
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, scale]);
-
-  const drawItems = (context: CanvasRenderingContext2D) => {
-    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-    context.font = "20px Arial";
-    context.fillStyle = "black";
-
-    draggableItems.forEach((item) => {
-      let { x, y } = item.pdfPosition;
-      x = x * scale;
-      y = y * scale;
-      const icon = getIcon(item.type);
-      if (icon) {
-        //context.drawImage(icon, x, yPos - icon.height);
-      }
-      context.fillText(item.label, x, y);
-
-      context.fillStyle = "rgba(200,200,200,0.5)"; // or any distinguishable color
-      context.fillRect(x, y - HANDLE_SIZE, HANDLE_SIZE, HANDLE_SIZE); // Draw handle at bottom right corner
-      context.fillStyle = "black"; // or any distinguishable color
-    });
-  };
+  }, [page, scale]); // Including drawItems as a dependency breaks everything and i don't fucking know why
 
   useEffect(() => {
     const canvas = itemsCanvasRef.current;
@@ -102,7 +100,7 @@ export function PDFCanvas({
     const context = canvas.getContext("2d");
     if (!context) return;
     drawItems(context);
-  }, [draggableItems]);
+  }, [draggableItems, drawItems]);
 
   const handleMouseDown = useCallback(
     (event: MouseEvent) => {
@@ -115,7 +113,6 @@ export function PDFCanvas({
 
       let itemToDragIndex = -1;
 
-      // Loop through items in reverse to get the topmost item (assuming later items are 'on top')
       for (let i = draggableItems.length - 1; i >= 0; i--) {
         const item = draggableItems[i];
         const { x, y } = item.pdfPosition;
@@ -176,8 +173,8 @@ export function PDFCanvas({
     setDraggableItems((prevItems) =>
       prevItems.map((item) => {
         if (item.isDragging) {
-          const { isDragging, ...networkItem } = item; // Exclude isDragging
-          updateItem(networkItem); // Pass only NetworkItem fields
+          const { isDragging, ...networkItem } = item;
+          updateItem(networkItem);
         }
         return {
           ...item,
@@ -185,7 +182,7 @@ export function PDFCanvas({
         };
       })
     );
-  }, [updateItem]); // Ensure updateItem is included in dependencies
+  }, [updateItem]);
 
   useEffect(() => {
     const canvas = itemsCanvasRef.current;

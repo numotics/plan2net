@@ -15,9 +15,7 @@ export function PropertyEditor() {
     [key: string]: string | null;
   }>({});
 
-  const selectedNetworkItem: NetworkItem | undefined = selectedNode
-    ? itemsRegistry.find((item) => item.id === selectedNode)
-    : undefined;
+  const selectedNetworkItem: NetworkItem | undefined = itemsRegistry[selectedNode!];
 
   const userProperties = selectedNetworkItem?.properties || {};
   const regularProperties = selectedNetworkItem
@@ -27,14 +25,15 @@ export function PropertyEditor() {
   const handleEditRegularPropertyValue = (key: string, value: string) => {
     if (!selectedNode) return;
 
-    const updatedItemIndex = itemsRegistry.findIndex(
-      (item) => item.id === selectedNode
-    );
-    if (updatedItemIndex !== -1) {
-      const updatedItem = { ...itemsRegistry[updatedItemIndex] };
-      updatedItem[key] = value;
+    if (selectedNetworkItem) {
+      const updatedItem = { ...selectedNetworkItem };
+      if (updatedItem) {
+        (updatedItem as any)[key] = value;
+      } else {
+        (updatedItem as any) = { [key]: value };
+      }
       updateItem(updatedItem);
-
+      
       setEditRegularProperty((prev) => ({ ...prev, [key]: null }));
     }
   };
@@ -47,11 +46,8 @@ export function PropertyEditor() {
     // Ensure regular property keys are not editable
     if (!selectedNode || Object.keys(regularProperties).includes(oldKey)) return;
 
-    const updatedItemIndex = itemsRegistry.findIndex(
-      (item) => item.id === selectedNode
-    );
-    if (updatedItemIndex !== -1) {
-      const updatedItem = itemsRegistry[updatedItemIndex];
+    const updatedItem = itemsRegistry[selectedNode]
+    if (updateItem) {
       const properties = { ...updatedItem.properties };
       const orderedKeys = Object.keys(properties);
 
@@ -59,6 +55,26 @@ export function PropertyEditor() {
       if (index !== -1) {
         orderedKeys.splice(index, 1);
         orderedKeys.splice(index, 0, newKey);
+
+        delete properties[oldKey];
+        if (newKey.trim()) {
+          properties[newKey] = value !== "" ? value : "NULL";
+        }
+
+        const updatedProperties = orderedKeys.reduce(
+          (acc: Record<string, any>, key) => {
+            acc[key] = properties[key];
+            return acc;
+          },
+          {}
+        );
+        updatedItem.properties = updatedProperties;
+        updateItem(updatedItem);
+
+        setEditProperty((prev) => ({ ...prev, [oldKey]: null }));
+        setEditKey((prev) => ({ ...prev, [oldKey]: false }));
+      } else {
+        orderedKeys.push(newKey);
 
         delete properties[oldKey];
         if (newKey.trim()) {
