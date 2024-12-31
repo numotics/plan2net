@@ -196,7 +196,7 @@ export function PropertyEditor() {
                   }}
                   className="text-gray-600 text-right cursor-pointer outline-none no-underline focus:underline"
                 >
-                  {String(value)}
+                  {String(value) !== "" ? String(value) : "(empty)"}
                 </span>
               </div>
             ))}
