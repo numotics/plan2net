@@ -182,7 +182,7 @@ export function PDFCanvas({
         };
       })
     );
-  }, [updateItem]);
+  }, []);
 
   useEffect(() => {
     const canvas = itemsCanvasRef.current;

@@ -7,20 +7,25 @@ import { useEditorStore } from "@/lib/store";
 import { library } from "@/lib/itemLibrary";
 import { hashCode, intToHexColor } from "@/lib/utils";
 
+// Initialize Cytoscape extensions
 cytoscape.use(dagre);
 
 export function NetworkDiagram() {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
+
+  // Extract necessary state and actions from Zustand store
   const { setSelectedNode, addItem, itemsRegistry } = useEditorStore();
 
+  // Initialize Cytoscape instance and set up event listeners
   useEffect(() => {
     if (!containerRef.current) return;
 
-    console.log("Initializing cytoscape");
+    console.log("Initializing Cytoscape");
+
     cyRef.current = cytoscape({
       container: containerRef.current,
-      elements: [],
+      elements: [], // Initial empty elements
       style: [
         {
           selector: "node",
@@ -60,16 +65,18 @@ export function NetworkDiagram() {
       userZoomingEnabled: true,
       userPanningEnabled: true,
       boxSelectionEnabled: true,
+      maxZoom: 5,
+      minZoom: 0.5
     });
 
-    // cytoscape handlers
 
+
+    // Event listener for node selection
     cyRef.current.on("tap", "node", (evt) => {
       setSelectedNode(evt.target.id());
     });
 
-    // Key handlers
-
+    // Clean up Cytoscape instance on component unmount
     return () => {
       if (cyRef.current) {
         cyRef.current.destroy();
@@ -77,6 +84,65 @@ export function NetworkDiagram() {
     };
   }, [setSelectedNode]);
 
+  // Centralized rendering function
+  const renderNetwork = () => {
+    if (!cyRef.current) return;
+    const cy = cyRef.current;
+
+    // Begin transaction for batch updates
+    cy.batch(() => {
+      // Clear existing elements to avoid duplicates
+      cy.elements().remove();
+
+      // Add nodes from itemsRegistry
+      Object.values(itemsRegistry).forEach((item) => {
+        cy.add({
+          group: "nodes",
+          data: {
+            id: item.id,
+            label: item.label,
+            type: item.type,
+            properties: item.properties,
+          },
+          position: item.position,
+        });
+      });
+
+      // Create edges based on properties
+      Object.values(itemsRegistry).forEach((sourceItem) => {
+        if (!sourceItem.properties) return;
+
+        Object.entries(sourceItem.properties).forEach(([key, targetId]) => {
+          if (itemsRegistry[targetId]) {
+            const edgeId = `${sourceItem.id}-${targetId}-edge`;
+            const edgeColor = intToHexColor(hashCode(key));
+            cy.add({
+              group: "edges",
+              data: {
+                id: edgeId,
+                source: sourceItem.id,
+                target: targetId,
+                color: edgeColor,
+              },
+              style: {
+                "line-color": edgeColor,
+              },
+            });
+          }
+        });
+      });
+
+      // Apply layout after adding all elements
+      cy.layout({ name: "dagre" }).run();
+    });
+  };
+
+  // Invoke renderNetwork whenever itemsRegistry changes
+  useEffect(() => {
+    renderNetwork();
+  }, [itemsRegistry]);
+
+  // Handle drag over event
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -84,6 +150,7 @@ export function NetworkDiagram() {
     console.log("Drag over event");
   };
 
+  // Handle drop event
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     console.log("Drop event triggered");
@@ -91,12 +158,11 @@ export function NetworkDiagram() {
     const itemType = e.dataTransfer.getData("application/reactflow");
     console.log("Dropped item type:", itemType);
 
-    if (!itemType || !cyRef.current) {
-      console.log("Missing item type or cytoscape instance");
+    if (!itemType) {
+      console.log("Missing item type");
       return;
     }
 
-    // Get drop position relative to the container
     const containerRect = containerRef.current?.getBoundingClientRect();
     if (!containerRect) {
       console.log("No container rect found");
@@ -110,21 +176,12 @@ export function NetworkDiagram() {
     console.log("Drop position:", position);
 
     try {
-      // Add the new node
-      const existingNodes = cyRef.current.nodes(`[type="${itemType}"]`);
+      const existingNodes = Object.values(itemsRegistry).filter(
+        (item) => item.type === itemType
+      );
       const nodeId = `${itemType}-${existingNodes.length + 1}`;
 
-      const newNode = cyRef.current.add({
-        group: "nodes",
-        data: {
-          id: nodeId,
-          label: nodeId,
-          properties: library[itemType]?.properties,
-        },
-        position,
-      });
-      console.log("Node added successfully:", newNode.id());
-
+      // Add item to Zustand store. This will trigger useEffect to render the network.
       addItem({
         id: nodeId,
         type: itemType,
@@ -136,91 +193,24 @@ export function NetworkDiagram() {
         },
         properties: library[itemType]?.properties,
       });
+
+      console.log("Item added to registry:", nodeId);
     } catch (error) {
-      console.error("Error adding node:", error);
+      console.error("Error adding item:", error);
     }
   };
 
+  // Handle drag enter event
   const onDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     console.log("Drag enter event");
   };
 
-  const createEdges = () => {
-    if (!cyRef.current) return;
-
-    // Track existing edges to determine which ones to remove
-    const edgesToRemove = new Set(
-      cyRef.current.edges().map((edge) => edge.id())
-    );
-
-    cyRef.current.nodes().forEach((sourceNode) => {
-      const sourceData = sourceNode.data();
-      const { properties } = sourceData;
-
-      if (!properties) return;
-
-      cyRef.current?.nodes().forEach((targetNode) => {
-        if (sourceNode.id() === targetNode.id()) return;
-
-        const propIdx = Object.values(properties).indexOf(targetNode.id());
-        if (propIdx !== -1) {
-          const edgeId = `${sourceNode.id()}-${targetNode.id()}-edge`;
-          const newEdgeColor = intToHexColor(
-            hashCode(Object.keys(properties)[propIdx])
-          );
-          const existingEdge = cyRef.current?.getElementById(edgeId);
-          if (!existingEdge?.isEdge()) {
-            cyRef.current?.add({
-              group: "edges",
-              data: {
-                id: edgeId,
-                source: sourceNode.id(),
-                target: targetNode.id(),
-                color: newEdgeColor,
-              },
-              style: {
-                "line-color": newEdgeColor,
-              },
-            });
-          } else {
-            edgesToRemove.delete(edgeId);
-
-            // Update edge color if it has changed
-            const currentEdgeColor = existingEdge.data("color");
-            if (currentEdgeColor !== newEdgeColor) {
-              existingEdge.data("color", newEdgeColor);
-              existingEdge.style("line-color", newEdgeColor);
-            }
-          }
-        }
-      });
-    });
-
-    edgesToRemove.forEach((edgeId) => {
-      cyRef.current?.remove(cyRef.current.getElementById(edgeId));
-    });
-  };
-  useEffect(() => {
-    // update properties of each node
-    if (!cyRef.current) return;
-
-    cyRef.current.nodes().forEach((node) => {
-      Object.entries(itemsRegistry[node.id()]).forEach(([key, value]) => {
-        node.data(key, value);
-      });
-    });
-
-    createEdges();
-  }, [itemsRegistry]);
-
   return (
     <div
       ref={containerRef}
       onDragOver={onDragOver}
-      // onDragEnd={onDrop}
-      onDropCapture={onDrop}
-      // onDragEndCapture={onDrop}
+      onDrop={onDrop} // Changed to onDrop from onDropCapture for clarity
       onDragEnter={onDragEnter}
       className="h-full w-full bg-white cursor-grab"
     />
