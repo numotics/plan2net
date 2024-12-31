@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { PDFPageType, renderPDFPage } from "@/lib/pdf-utils";
 import { NetworkItem } from "@/lib/store";
-import { getIcon } from "@/lib/itemLibrary";
 
 interface PDFCanvasProps {
   page: PDFPageType | null;
@@ -53,10 +52,10 @@ export function PDFCanvas({
       let { x, y } = item.pdfPosition;
       x = x * scale;
       y = y * scale;
-      const icon = getIcon(item.type);
-      if (icon) {
-        //context.drawImage(icon, x, y - icon.height);
-      }
+      //const icon = getIcon(item.type);
+      //if (icon) {
+      //  //context.drawImage(icon, x, y - icon.height);
+      //}
       context.fillText(item.label, x, y);
 
       context.fillStyle = "rgba(200,200,200,0.5)";

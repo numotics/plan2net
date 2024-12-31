@@ -6,23 +6,7 @@ import { MenuIcon, Save, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEditorStore, serializeProject, importProject } from '@/lib/store';
 import { saveToFile } from '@/lib/utils';
 import { useState } from 'react';
-import ReactDOM from 'react-dom';
-
-function Modal({ isOpen, onClose, children }: { isOpen: boolean; onClose: () => void; children: React.ReactNode }) {
-  if (!isOpen) return null;
-
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-      <div className="bg-white p-8 rounded shadow-lg">
-        {children}
-        <button onClick={onClose} className="mt-4">
-          Close
-        </button>
-      </div>
-    </div>,
-    document.body
-  );
-}
+import { PortalModal } from '@/components/util/PortalModal';
 
 export function Header() {
   const { zoomLevel, setZoomLevel } = useEditorStore();
@@ -90,10 +74,10 @@ export function Header() {
       </div>
 
       {/* Modal for File Input */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+      <PortalModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="w-1/3">
         <h2>Select a file to open</h2>
         <input type="file" onChange={handleFileChange} />
-      </Modal>
+      </PortalModal>
     </header>
   );
 }
