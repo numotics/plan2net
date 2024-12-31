@@ -5,6 +5,7 @@ import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
 import { useEditorStore } from "@/lib/store";
 import { library } from "@/lib/itemLibrary";
+import { hashCode, intToHexColor } from "@/lib/utils";
 
 cytoscape.use(dagre);
 
@@ -148,6 +149,11 @@ export function NetworkDiagram() {
   const createEdges = () => {
     if (!cyRef.current) return;
 
+    // Track existing edges to determine which ones to remove
+    const edgesToRemove = new Set(
+      cyRef.current.edges().map((edge) => edge.id())
+    );
+
     cyRef.current.nodes().forEach((sourceNode) => {
       const sourceData = sourceNode.data();
       const { properties } = sourceData;
@@ -157,25 +163,44 @@ export function NetworkDiagram() {
       cyRef.current?.nodes().forEach((targetNode) => {
         if (sourceNode.id() === targetNode.id()) return;
 
-        if (Object.values(properties).includes(targetNode.id())) {
+        const propIdx = Object.values(properties).indexOf(targetNode.id());
+        if (propIdx !== -1) {
           const edgeId = `${sourceNode.id()}-${targetNode.id()}-edge`;
-
-          // Check if the edge already exists
-          if (!cyRef.current?.getElementById(edgeId).isEdge()) {
+          const newEdgeColor = intToHexColor(
+            hashCode(Object.keys(properties)[propIdx])
+          );
+          const existingEdge = cyRef.current?.getElementById(edgeId);
+          if (!existingEdge?.isEdge()) {
             cyRef.current?.add({
               group: "edges",
               data: {
                 id: edgeId,
                 source: sourceNode.id(),
                 target: targetNode.id(),
+                color: newEdgeColor,
+              },
+              style: {
+                "line-color": newEdgeColor,
               },
             });
+          } else {
+            edgesToRemove.delete(edgeId);
+
+            // Update edge color if it has changed
+            const currentEdgeColor = existingEdge.data("color");
+            if (currentEdgeColor !== newEdgeColor) {
+              existingEdge.data("color", newEdgeColor);
+              existingEdge.style("line-color", newEdgeColor);
+            }
           }
         }
       });
     });
-  };
 
+    edgesToRemove.forEach((edgeId) => {
+      cyRef.current?.remove(cyRef.current.getElementById(edgeId));
+    });
+  };
   useEffect(() => {
     // update properties of each node
     if (!cyRef.current) return;
