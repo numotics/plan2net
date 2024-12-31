@@ -32,17 +32,18 @@ export function Library() {
   const handleNewItem = (values: any) => {
     const newItem = {
       type: values.name,
-      icon: values.icon_url,
+      icon: values.icon,
       properties: parseProperties(values.properties),
     };
 
     const updatedLibrary = { ...library, [values.name]: newItem };
     localStorage.setItem("itemLibrary", JSON.stringify(updatedLibrary));
+    setModalOpen(false);
   };
 
   const formSchema = z.object({
     name: z.string(),
-    icon_url: z.string(),
+    icon: z.string(),
     properties: z.string(),
   });
 
@@ -53,9 +54,9 @@ export function Library() {
         label: "Name",
         type: "text",
       },
-      icon_url: {
+      icon: {
         label: "Icon (base64 url)",
-        type: "text",
+        type: "image",
       },
       properties: {
         label: "Properties (i.e: ip=10.0.0.1,net,col)",

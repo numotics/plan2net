@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Path, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -13,8 +14,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import React from 'react';
-
+import { ImageInput } from '@/components/ui/ImageInput'; // Import the ImageInput component
 
 interface FieldConfig {
   label: string;
@@ -29,33 +29,12 @@ interface FormConfig<T extends z.ZodObject<any, any>> {
   onSubmit: (values: z.infer<T>) => void;
 }
 
-/**
- * Creates a form component from a Zod schema with built-in validation and styling
- * @template T - Zod schema type
- * @param {FormConfig<T>} config - Form configuration object
- * @returns {React.FC} A React component that renders the form
- * @example
- * const userSchema = z.object({
- *   name: z.string(),
- *   email: z.string().email()
- * });
- * 
- * const UserForm = createZodForm({
- *   schema: userSchema,
- *   fields: {
- *     name: { label: 'Name' },
- *     email: { label: 'Email', type: 'email' }
- *   },
- *   onSubmit: (values) => console.log(values)
- * });
- */
-
 export function createZodForm<T extends z.ZodObject<any, any>>({
   schema,
   fields,
   onSubmit,
 }: FormConfig<T>) {
-  return function GeneratedForm({ children }: { children: React.ReactNode; }) {
+  return function GeneratedForm({ children }: { children: React.ReactNode }) {
     const form = useForm<z.infer<T>>({
       resolver: zodResolver(schema),
       defaultValues: Object.keys(fields).reduce((acc, key) => {
@@ -63,6 +42,22 @@ export function createZodForm<T extends z.ZodObject<any, any>>({
         return acc;
       }, {} as any),
     });
+
+    const [base64Image, setBase64Image] = useState<string | null>(null);
+
+    const handleImageUpload = (files: FileList | null) => {
+      if (!files || files.length === 0) return;
+
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        //@ts-ignore
+        setBase64Image(reader.result as string);
+        //@ts-ignore
+        form.setValue("icon", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    };
 
     return (
       <Form {...form}>
@@ -78,14 +73,22 @@ export function createZodForm<T extends z.ZodObject<any, any>>({
                   <FormControl>
                     <div className="relative">
                       {config.icon && (
-                          <config.icon className="absolute left-3 top-1/2 h-5 w-5 text-muted-foreground" />
+                        <config.icon className="absolute left-3 top-1/2 h-5 w-5 text-muted-foreground" />
                       )}
-                      <Input
-                        className={config.icon ? 'pl-10' : ''}
-                        placeholder={config.placeholder}
-                        type={config.type}
-                        {...field}
-                      />
+                      {config.type === 'image' ? (
+                        <ImageInput
+                          value={field.value}
+                          onChange={(base64) => form.setValue(name as Path<z.infer<T>>, base64)}
+                          placeholder="Click or paste an image"
+                        />
+                      ) : (
+                        <Input
+                          className={config.icon ? 'pl-10' : ''}
+                          placeholder={config.placeholder}
+                          type={config.type}
+                          {...field}
+                        />
+                      )}
                     </div>
                   </FormControl>
                   <FormMessage />
