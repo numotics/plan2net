@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PDFPageType, renderPDFPage } from "@/lib/pdf-utils";
 import { NetworkItem } from "@/lib/store";
 import { ItemsCanvas } from "./ItemsCanvas";
