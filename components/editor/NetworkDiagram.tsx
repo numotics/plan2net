@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useEffect, useRef, useMemo } from "react";
 import cytoscape from "cytoscape";
@@ -9,7 +9,7 @@ import { hashCode, intToHexColor } from "@/lib/utils";
 
 cytoscape.use(dagre);
 
-function filterRegistryForRendering(itemsRegistry) {
+function filterRegistryForRendering(itemsRegistry: any) {
   return Object.keys(itemsRegistry).reduce((acc, key) => {
     const { pdfPosition, ...rest } = itemsRegistry[key];
     acc[key] = rest;
@@ -27,8 +27,6 @@ export function NetworkDiagram() {
 
   useEffect(() => {
     if (!containerRef.current) return;
-
-    console.log("Initializing Cytoscape");
 
     cyRef.current = cytoscape({
       container: containerRef.current,
@@ -137,34 +135,22 @@ export function NetworkDiagram() {
 
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
-    console.log("Drag over event");
   };
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    console.log("Drop event triggered");
-
     const itemType = e.dataTransfer.getData("application/reactflow");
-    console.log("Dropped item type:", itemType);
-
-    if (!itemType) {
-      console.log("Missing item type");
-      return;
-    }
+    
+    if (!itemType) return;
 
     const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) {
-      console.log("No container rect found");
-      return;
-    }
+    if (!containerRect) return;
 
     const position = {
       x: e.clientX - containerRect.left,
       y: e.clientY - containerRect.top,
     };
-    console.log("Drop position:", position);
 
     try {
       const existingNodes = Object.values(itemsRegistry).filter(
@@ -185,16 +171,9 @@ export function NetworkDiagram() {
       });
 
       setSelectedNode(nodeId);
-
-      console.log("Item added to registry:", nodeId);
     } catch (error) {
       console.error("Error adding item:", error);
     }
-  };
-
-  const onDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    console.log("Drag enter event");
   };
 
   return (
@@ -202,7 +181,6 @@ export function NetworkDiagram() {
       ref={containerRef}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      onDragEnter={onDragEnter}
       className="h-full w-full bg-white cursor-grab"
     />
   );

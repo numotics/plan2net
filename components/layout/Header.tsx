@@ -7,10 +7,12 @@ import { useEditorStore, serializeProject, importProject } from '@/lib/store';
 import { saveToFile } from '@/lib/utils';
 import { useState } from 'react';
 import { PortalModal } from '@/components/util/PortalModal';
+import { fileToBase64, isImageFile, isPDFFile } from '@/lib/file-utils';
 
 export function Header() {
-  const { zoomLevel, setZoomLevel } = useEditorStore();
+  const { zoomLevel, setZoomLevel, setContent } = useEditorStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isContentModalOpen, setIsContentModalOpen] = useState(false);
 
   const handleSave = () => {
     let serialized = serializeProject();
@@ -24,8 +26,29 @@ export function Header() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      importProject(event)
-      setIsModalOpen(false)
+      importProject(event);
+      setIsModalOpen(false);
+    }
+  };
+
+  const handleContentFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      if (!isImageFile(file) && !isPDFFile(file)) {
+        alert('Please select a PDF or image file');
+        return;
+      }
+
+      const base64Data = await fileToBase64(file);
+      const contentType = isImageFile(file) ? 'image' : 'pdf';
+      
+      setContent(base64Data, contentType);
+      setIsContentModalOpen(false);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      alert('Error processing file');
     }
   };
 
@@ -40,7 +63,8 @@ export function Header() {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onSelect={() => console.log('New Project')}>New</DropdownMenuItem>
-            <DropdownMenuItem onSelect={handleOpen}>Open</DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleOpen}>Open Project</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setIsContentModalOpen(true)}>Load Content</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => console.log('Preferences')}>Preferences</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -73,10 +97,25 @@ export function Header() {
         </div>
       </div>
 
-      {/* Modal for File Input */}
+      {/* Project Open Modal */}
       <PortalModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="w-1/3">
-        <h2>Select a file to open</h2>
-        <input type="file" onChange={handleFileChange} />
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Open Project</h2>
+          <input type="file" onChange={handleFileChange} accept=".json" />
+        </div>
+      </PortalModal>
+
+      {/* Content Upload Modal */}
+      <PortalModal isOpen={isContentModalOpen} onClose={() => setIsContentModalOpen(false)} className="w-1/3">
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Load Content</h2>
+          <p className="text-sm text-muted-foreground">Select a PDF or image file to load</p>
+          <input 
+            type="file" 
+            onChange={handleContentFileChange} 
+            accept="application/pdf,image/*"
+          />
+        </div>
       </PortalModal>
     </header>
   );

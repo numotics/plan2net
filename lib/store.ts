@@ -14,12 +14,14 @@ interface EditorState {
   zoomLevel: number;
   isDragging: boolean;
   itemsRegistry: Record<string, NetworkItem>;
-  pdfURL: string;
+  contentData: string;
+  contentType: 'pdf' | 'image';
   setSelectedNode: (nodeId: string | null) => void;
   setZoomLevel: (level: number) => void;
   setIsDragging: (dragging: boolean) => void;
   addItem: (item: NetworkItem) => void;
   updateItem: (updatedItem: NetworkItem) => void;
+  setContent: (data: string, type: 'pdf' | 'image') => void;
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
@@ -27,7 +29,8 @@ export const useEditorStore = create<EditorState>((set) => ({
   zoomLevel: 1,
   isDragging: false,
   itemsRegistry: {},
-  pdfURL: "",
+  contentData: '',
+  contentType: 'pdf',
   setSelectedNode: (nodeId) => set({ selectedNode: nodeId }),
   setZoomLevel: (level) => set({ zoomLevel: level }),
   setIsDragging: (dragging) => set({ isDragging: dragging }),
@@ -44,13 +47,15 @@ export const useEditorStore = create<EditorState>((set) => ({
       },
     };
   }),
+  setContent: (data, type) => set({ contentData: data, contentType: type }),
 }));
 
 export const serializeProject = () => {
   const state = useEditorStore.getState();
 
   return JSON.stringify({
-    pdfURL: state.pdfURL, 
+    contentData: state.contentData,
+    contentType: state.contentType,
     itemsRegistry: state.itemsRegistry,
   });
 };
@@ -61,12 +66,12 @@ export const importProject = async (event: React.ChangeEvent<HTMLInputElement>) 
   reader.readAsText(file);
   reader.onload = async () => {
     const data = reader.result as string;
-    console.log(data);
     const parsedData = JSON.parse(data);
-    const { pdfURL, itemsRegistry } = parsedData;
+    const { contentData, contentType, itemsRegistry } = parsedData;
     useEditorStore.setState({
-      pdfURL: pdfURL,
-      itemsRegistry: itemsRegistry
+      contentData,
+      contentType,
+      itemsRegistry
     })
   }
 }
