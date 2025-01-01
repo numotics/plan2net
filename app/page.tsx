@@ -6,7 +6,7 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
 import { Header } from '@/components/layout/Header';
-import { ContentViewer } from '@/components/editor/ContentViewer';
+import { PDFViewer } from '@/components/editor/PDFViewer';
 import { NetworkDiagram } from '@/components/editor/NetworkDiagram';
 import { Library } from '@/components/editor/Library';
 import { PropertyEditor } from '@/components/editor/PropertyEditor';
@@ -22,7 +22,7 @@ export default function Home() {
         </div>
         <ResizablePanelGroup direction="horizontal" className="flex-grow">
           <ResizablePanel defaultSize={50}>
-            <ContentViewer />
+            <PDFViewer url="/sample.pdf" />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel defaultSize={50}>
