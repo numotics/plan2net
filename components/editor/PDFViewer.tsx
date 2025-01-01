@@ -5,12 +5,12 @@ import { PDFCanvas } from './PDFCanvas';
 import { useEditorStore } from '@/lib/store';
 
 interface PDFViewerProps {
-  url: string;
+  data: string;
 }
 
-export function PDFViewer({ url }: PDFViewerProps) {
+export function PDFViewer({ data }: PDFViewerProps) {
   const { zoomLevel, itemsRegistry, updateItem } = useEditorStore();
-  const { page, loading, error } = usePDFPage(url);
+  const { page, loading, error } = usePDFPage(data);
 
   if (loading) {
     return (
